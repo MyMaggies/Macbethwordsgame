@@ -1,4 +1,5 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes">
 <title>Castle of Words</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
@@ -445,7 +446,7 @@ let isTouch=false;
 let B=null,runSet=[],bossDone=false,pauseFrom='play',tgtX=null,drag=null,ARENA=null;const held={l:false,r:false},holds=new Map();
 const lightCv=mk(W,MAPH,()=>{});const lctx=lightCv.getContext('2d');
 
-const MENU=['ENTER THE CASTLE','MUSIC','TEST: BOSS'];let howStart=false;
+const MENU=['ENTER THE CASTLE','MUSIC'];let howStart=false;
 function menuLabel(i){
   if(i===1)return 'MUSIC: '+(musicOn?'ON':'OFF');
   return MENU[i];
@@ -1037,7 +1038,7 @@ function dim(a=.55){R(ctx,'rgba(6,4,16,'+a+')',0,HUD,W,MAPH);}
 
 function renderTitle(){
   titleScene();logo();
-  pbox(60,198,184,62);
+  pbox(60,198,184,46);
   // menu
   const y0=208;
   MENU.forEach((_,i)=>{const y=y0+i*16;if(i===menuSel){arrowR(72,y,GOLD);}txt(menuLabel(i),86,y,i===menuSel?'#fff1b8':INK);});
@@ -1274,7 +1275,6 @@ function activate(){
   if(S==='title'){
     if(menuSel===0){howStart=true;S='how';SFX.select();}
     else if(menuSel===1){setMusic(!musicOn);}
-    else if(menuSel===2){SFX.start();newGame(2,true);} // TEST ONLY: remove before class
   }else if(S==='boss'){if(B.big)bossSlash();else bossJump();}
   else if(S==='how'){if(howStart){howStart=false;SFX.start();newGame(2);}else{S='title';SFX.select();}}
   else if(S==='intro'){if(introT>.25){S='play';SFX.start();}}
@@ -1396,5 +1396,3 @@ if(document.fonts&&document.fonts.load){Promise.race([document.fonts.load('8px "
 
 })();
 </script>
-
-</body></html>
