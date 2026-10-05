@@ -123,12 +123,15 @@ function arrowD(x,y,col=GOLD){R(ctx,col,x,y,7,1);R(ctx,col,x+1,y+1,5,1);R(ctx,co
 function star(x,y,on){const c=on?GOLD:'#3a3358';R(ctx,c,x+3,y,1,1);R(ctx,c,x+2,y+1,3,1);R(ctx,c,x,y+2,7,1);R(ctx,c,x+1,y+3,5,1);R(ctx,c,x+2,y+4,3,1);R(ctx,c,x+1,y+5,2,1);R(ctx,c,x+4,y+5,2,1);}
 
 /* =====================================================================
-   3. SPRITES  (all drawn in code; PNG strips in assets/ override them)
+   3. SPRITES  (all drawn in code, no image files needed)
    ===================================================================== */
 const SP={};
-function playerSprite(dir,fr){
+function playerSprite(dir,fr,hero='macbeth'){
   return mk(16,16,g=>{
-    const SK='#f2c294',SKs='#c98f66',HR='#6b3f24',HRd='#4a2916',TN='#c93a3a',TNd='#8c2430',BT='#3b2a22';
+    const lady=hero==='lady',fl=hero==='fleance';
+    const SK='#f2c294',SKs='#c98f66',BT='#3b2a22';
+    const HR=lady?'#2b1a33':fl?'#d9b24c':'#6b3f24',HRd=lady?'#1a0f22':fl?'#a9852f':'#4a2916';
+    const TN=lady?'#5b47b8':fl?'#3f9a4a':'#c93a3a',TNd=lady?'#3a2c86':fl?'#2a6e34':'#8c2430';
     R(g,'rgba(0,0,0,.35)',3,13,10,2);
     const s=fr?1:0;
     if(dir<2){ // front/back: boots alternate
@@ -145,13 +148,25 @@ function playerSprite(dir,fr){
     if(dir===0){R(g,HR,4,1,8,2);R(g,HR,3,2,1,3);R(g,HR,12,2,1,3);R(g,SK,4,3,8,3);R(g,SKs,4,5,8,1);R(g,K,6,4,1,2);R(g,K,9,4,1,2);R(g,'#e87a7a',7,5,2,1);}
     else if(dir===1){R(g,HR,4,1,8,5);R(g,HRd,4,4,8,2);R(g,HRd,7,2,2,1);}
     else{R(g,HR,4,1,8,2);R(g,HR,8,2,4,4);R(g,SK,4,3,5,3);R(g,SKs,4,5,5,1);R(g,K,5,4,1,2);R(g,SK,3,4,1,2);}
-    // tiny feather
-    R(g,'#e8e8e8',10,0,1,2);R(g,'#bdbdbd',11,1,1,1);
+    if(lady){ // long dark hair, a gown to the ground and a gold circlet
+      if(dir===0){R(g,K,2,3,2,9);R(g,HR,3,3,1,8);R(g,K,12,3,2,9);R(g,HR,12,3,1,8);R(g,GOLD,5,1,6,1);R(g,'#ff6a9a',7,0,2,1);}
+      else if(dir===1){R(g,K,3,1,10,11);R(g,HR,4,1,8,10);R(g,HRd,4,9,8,2);R(g,GOLD,4,1,8,1);}
+      else{R(g,K,8,2,5,10);R(g,HR,9,3,3,8);R(g,HRd,9,9,3,2);R(g,GOLD,4,1,6,1);}
+      R(g,K,3,11,10,4);R(g,TN,4,11,8,3);R(g,TNd,4,13,8,1);R(g,'#e8e8f8',4,11,8,1);R(g,BT,5+s*4,14,2,1);
+    }else if(fl){ // young, fair-haired, green tunic, plain cap-less
+      R(g,'#f4f0d8',6,6,4,1);
+    }else{ // tiny feather
+      R(g,'#e8e8e8',10,0,1,2);R(g,'#bdbdbd',11,1,1,1);
+    }
   });
 }
 function mirror(c){return mk(c.width,c.height,g=>{g.translate(c.width,0);g.scale(-1,1);g.drawImage(c,0,0);});}
-SP.player=[[0,1].map(f=>playerSprite(0,f)),[0,1].map(f=>playerSprite(1,f)),[0,1].map(f=>playerSprite(2,f))];
-SP.player.push(SP.player[2].map(mirror));
+const HEROES=['macbeth','lady','fleance'],HERO_NAME={macbeth:'MACBETH',lady:'LADY MACBETH',fleance:'FLEANCE'},_hs={};
+function heroSet(h){
+  if(!_hs[h]){const a=[0,1,2].map(d=>[0,1].map(f=>playerSprite(d,f,h)));a.push(a[2].map(mirror));_hs[h]=a;}
+  return _hs[h];
+}
+SP.player=heroSet('macbeth');
 
 function ghostSprite(c,cd,cl,fr,kind,ox=0,oy=0){ // kind: 'norm' | 'scared' | 'flash' | 'eyes'
   return mk(16,16,g=>{
@@ -301,23 +316,8 @@ function tinted(c,col){ // a recoloured copy of a sprite (white flash, ice), cac
   return m[col]||(m[col]=mk(c.width,c.height,g=>{g.drawImage(c,0,0);g.globalCompositeOperation='source-atop';g.fillStyle=col;g.fillRect(0,0,c.width,c.height);}));
 }
 
-// Optional overrides: put 16px-tall PNG strips in an assets/ folder next to this file.
-function strip(name,n,apply){
-  const im=new Image();
-  im.onload=()=>{try{const fr=[];for(let i=0;i<n;i++)fr.push(mk(16,16,g=>g.drawImage(im,i*16,0,16,16,0,0,16,16)));apply(fr);}catch(e){}};
-  im.onerror=()=>{};
-  im.src='assets/'+name+'.png';
-}
-function loadOverrides(){
-  strip('player',8,f=>{SP.player=[[f[0],f[1]],[f[2],f[3]],[f[4],f[5]],[f[6],f[7]]];});
-  [1,2,3].forEach(i=>strip('ghost'+i,2,f=>{for(let d=0;d<4;d++){SP.ghost[i-1]['n0'+d]=f[0];SP.ghost[i-1]['n1'+d]=f[1];}}));
-  strip('scared',2,f=>{SP.scared=f;SP.flash=f;});
-  strip('scroll',1,f=>{SP.scroll=f[0];}); strip('dagger',1,f=>{SP.dagger=f[0];});
-  strip('gem',1,f=>{SP.gem=f[0];});
-  strip('stairs1',1,f=>{SP.stairs[0]=f[0];}); strip('stairs2',1,f=>{SP.stairs[1]=f[0];});
-  strip('trapdoor',1,f=>{SP.trap=f[0];}); strip('torch',2,f=>{SP.torch=f;});
-  strip('cauldron',2,f=>{SP.cauldron=f;});
-}
+// Banquo's ghost (hard level, rooms 10 to 14): the same ghost shape, drained to a pale blue-white
+SP.ghost[3]={};for(const k in SP.ghost[0])SP.ghost[3][k]=tinted(SP.ghost[0][k],'rgba(214,232,255,.8)');
 
 /* =====================================================================
    4. AUDIO  (tiny synth: no files needed)
@@ -434,10 +434,30 @@ function bfs(g,sx,sy,allowHouse){
 /* =====================================================================
    6. GAME STATE
    ===================================================================== */
-const cfg={sel:2,mode:'spooky',music:false,sfx:true};
-try{const s=JSON.parse(localStorage.getItem('castleOfWords')||'{}');if(typeof s.sfx==='boolean')cfg.sfx=s.sfx;}catch(e){}
+/* Three levels, named for Macbeth's own rise: Thane of Glamis (easy), Thane of Cawdor (medium), King of Scotland (hard).
+   Everything that changes with the level lives in this one table. */
+const RANKS=['easy','medium','hard'];
+const TIER={
+  easy:{label:'EASY',title:'THANE OF GLAMIS',blurb:'GENTLE: slow Sisters, kind Hecate',
+    ghosts:r=>1,gspeed:r=>2.3+Math.min(r,10)*.01,gtimer:(i,r)=>6+i*6,traps:r=>r<7?0:1,candles:7,fright:r=>13,wander:.3,
+    boss:{fire:4.4,ball:36,pspd:100,dodge:4,lob:6,rainN:2,hearts:3,potions:4,shield:8,hs0:.45,hs1:.05,sway:.6,fsc:.03,bolt:150,frozen:.9,lead:0,three:false,
+      pat:{3:{aim:.6,lob:.4},2:{aim:.5,lob:.5},1:{aim:.4,lob:.4,rain:.2}}}},
+  medium:{label:'MEDIUM',title:'THANE OF CAWDOR',blurb:'BALANCED: a fair fight',
+    ghosts:r=>r<7?1:2,gspeed:r=>2.8+Math.min(r,10)*.02,gtimer:(i,r)=>4+i*5,traps:r=>r<7?1:2,candles:6,fright:r=>11,wander:.22,
+    boss:{fire:3.4,ball:46,pspd:94,dodge:5,lob:4.6,rainN:2,hearts:3,potions:3,shield:6,hs0:.6,hs1:.08,sway:.8,fsc:.05,bolt:190,frozen:1.2,lead:0,three:true,
+      pat:{3:{aim:.5,lob:.5},2:{aim:.35,lob:.35,rain:.3},1:{aim:.3,lob:.3,rain:.3,fan:.1}}}},
+  hard:{label:'HARD',title:'KING OF SCOTLAND',blurb:'FIERCE: fast Sisters, wrathful Hecate',
+    // rooms 10 to 14 (r>=9) get extra danger on hard: Banquo's ghost joins them (faster, haunts you, ignores daggers), faster Sisters, quicker releases, more trapdoors, a shorter dagger spell
+    ghosts:r=>r<2?2:r<9?3:4,gspeed:r=>4.1+Math.min(r,10)*.04+(r>=9?.45:0),gtimer:(i,r)=>r>=9?1+i*2.2:1.5+i*3.5,traps:r=>r<4?2:r<9?3:4,candles:4,fright:r=>r>=9?5:7,wander:0,
+    boss:{fire:2.4,ball:66,pspd:94,dodge:7,lob:3.6,rainN:3,hearts:2,potions:2,shield:6,hs0:1,hs1:.22,sway:1.25,fsc:.05,bolt:250,frozen:1.6,lead:8,three:true,
+      pat:{3:{aim:.5,lob:.3,rain:.2},2:{aim:.25,lob:.2,rain:.2,fan:.2,dart:.15},1:{aim:.2,lob:.2,rain:.2,fan:.2,dart:.2}}}}
+};
+const cfg={sel:2,rank:'medium',hero:'macbeth',music:false,sfx:true};
+const TR=()=>TIER[cfg.rank];
+try{const s=JSON.parse(localStorage.getItem('castleOfWords')||'{}');if(typeof s.sfx==='boolean')cfg.sfx=s.sfx;if(RANKS.includes(s.rank))cfg.rank=s.rank;if(HEROES.includes(s.hero))cfg.hero=s.hero;}catch(e){}
+SP.player=heroSet(cfg.hero);
 sfxOn=cfg.sfx;
-function saveCfg(){try{localStorage.setItem('castleOfWords',JSON.stringify({mode:cfg.mode,sfx:cfg.sfx}));}catch(e){}}
+function saveCfg(){try{localStorage.setItem('castleOfWords',JSON.stringify({rank:cfg.rank,hero:cfg.hero,sfx:cfg.sfx}));}catch(e){}}
 
 let S='title',time=0,L=null,plan=[],roomIdx=0,score=0,candles=5,maxCandles=5,stats={},shake=0;
 let player=null,ghosts=[],mode='scatter',modeT=7,modeI=0,frightT=0,chain=0,invuln=0,dieT=0,fallT=0;
@@ -446,9 +466,11 @@ let isTouch=false;
 let B=null,runSet=[],bossDone=false,pauseFrom='play',tgtX=null,drag=null,ARENA=null;const held={l:false,r:false},holds=new Map();
 const lightCv=mk(W,MAPH,()=>{});const lctx=lightCv.getContext('2d');
 
-const MENU=['ENTER THE CASTLE','MUSIC'];let howStart=false;
+const MENU=['ENTER THE CASTLE','LEVEL','PLAY AS','MUSIC'];let howStart=false;
 function menuLabel(i){
-  if(i===1)return 'MUSIC: '+(musicOn?'ON':'OFF');
+  if(i===1)return 'LEVEL: '+TR().label;
+  if(i===2)return 'PLAY AS: '+HERO_NAME[cfg.hero];
+  if(i===3)return 'MUSIC: '+(musicOn?'ON':'OFF');
   return MENU[i];
 }
 
@@ -463,7 +485,7 @@ function buildPlan(which){
 function newGame(which,bossOnly){
   plan=buildPlan(which);roomIdx=0;score=0;stats={};B=null;bossDone=false;
   runSet=WORDS.filter(w=>which===2||w.act===which+1);
-  maxCandles=cfg.mode==='calm'?5:4;candles=maxCandles;
+  maxCandles=TR().candles;candles=maxCandles;
   WORDS.forEach(w=>stats[w.w]={wrong:0});
   if(bossOnly){plan=[];startBoss(true);}else startRoom(0);
 }
@@ -514,7 +536,7 @@ function startRoom(i){
     }
   }
   // trapdoors (snakes): corridor tiles
-  const nTrap=i<4?2:3;
+  const nTrap=TR().traps(i);
   const corr=shuffle(openT.filter(t=>!used.has(key(t.x,t.y))&&m.dist[t.y][t.x]>=5&&DIRS.filter(([dx,dy])=>m.g[t.y+dy]&&m.g[t.y+dy][t.x+dx]===0).length===2),rnd);
   for(const t of corr){
     if(L.traps.length>=nTrap)break;
@@ -588,20 +610,21 @@ function setupPlayer(){
   player={tx:L.start.x,ty:L.start.y,dx:0,dy:0,t:0,moving:false,face:0,want:-1,anim:0,warp:null,fall:0};
 }
 function setupGhosts(){
-  const n=cfg.mode==='calm'?(roomIdx<2?1:2):(roomIdx<2?2:3);
-  const slots=[[9,7],[8,7],[10,7]];
+  const n=TR().ghosts(roomIdx);
+  const slots=[[9,7],[8,7],[10,7],[9,7]];
   ghosts=[];
   for(let i=0;i<n;i++){
     const k=i; // 0 hunter, 1 ambusher, 2 wanderer
-    ghosts.push({k,tx:slots[i][0],ty:slots[i][1],dx:0,dy:-1,t:0,moving:false,state:'house',timer:1.5+i*3.5,face:0,anim:0});
+    ghosts.push({k,banquo:k===3,tx:slots[i][0],ty:slots[i][1],dx:0,dy:-1,t:0,moving:false,state:'house',timer:TR().gtimer(i,roomIdx),face:0,anim:0});
   }
 }
-const gSpeed=()=>(cfg.mode==='calm'?3.3:4.1)+Math.min(roomIdx,10)*.04;
+const gSpeed=()=>TR().gspeed(roomIdx);
 const PSPEED=5.2;
 
 const canGo=(e,d)=>{const [dx,dy]=DIRS[d];const x=e.tx+dx,y=e.ty+dy;return x>=0&&y>=0&&x<COLS&&y<ROWS&&L.g[y][x]===0;};
 function setDir(e,d){e.dx=DIRS[d][0];e.dy=DIRS[d][1];e.face=d;}
-function reverse(e){if(!e.moving)return;e.tx+=e.dx;e.ty+=e.dy;e.dx=-e.dx;e.dy=-e.dy;e.t=1-e.t;}
+const open=(x,y)=>x>=0&&y>=0&&x<COLS&&y<ROWS&&L.g[y][x]===0;
+function reverse(e){if(!e.moving)return;e.tx+=e.dx;e.ty+=e.dy;e.dx=-e.dx;e.dy=-e.dy;e.t=1-e.t;const f=DIRS.findIndex(d=>d[0]===e.dx&&d[1]===e.dy);if(f>=0)e.face=f;}
 function advance(e,dist,arrive){
   let guard=0;
   while(dist>0&&e.moving&&guard++<8){
@@ -629,8 +652,9 @@ function pArrive(e){
   }
   // trapdoors
   for(const t of L.traps){if(t.x===e.tx&&t.y===e.ty&&S==='play'){S='falling';fallT=.8;e.moving=false;SFX.trap();burst(t.x*TS+8,t.y*TS+8,'#6b4a2a',12,35);pop(t.x*TS+8,t.y*TS,'TRAPDOOR!','#ffb080');return;}}
+  if(e.halt){e.halt=false;e.moving=false;e.dx=0;e.dy=0;e.want=-1;return;}
   if(e.want>=0&&canGo(e,e.want)){setDir(e,e.want);}
-  else if(!(canGo(e,e.face)&&(e.dx||e.dy))){e.moving=false;e.dx=0;e.dy=0;}
+  else if(!((e.dx||e.dy)&&open(e.tx+e.dx,e.ty+e.dy))){e.moving=false;e.dx=0;e.dy=0;}   // keep going only if the tile ahead is open
 }
 
 function gPass(x,y,state){
@@ -642,14 +666,15 @@ function gPass(x,y,state){
 function gTarget(g){
   const p=player;
   if(g.state==='exit')return [9,4];
-  if(g.state==='scatter')return [[17,1],[1,1],[17,13]][g.k];
+  if(g.state==='scatter')return [[17,1],[1,1],[17,13],[1,13]][g.k];
   // chase
   if(g.k===0)return [p.tx,p.ty];
   if(g.k===1)return [clamp(p.tx+p.dx*3,1,17),clamp(p.ty+p.dy*3,1,13)];
+  if(g.k===3)return [clamp(p.tx-p.dx*2,1,17),clamp(p.ty-p.dy*2,1,13)];   // Banquo drifts in behind you
   return Math.hypot(g.tx-p.tx,g.ty-p.ty)>7?[p.tx,p.ty]:[1,13];
 }
 function gArrive(g){
-  if(g.state==='exit'&&g.tx===9&&g.ty===5){g.state=frightT>0?'frightened':mode;}
+  if(g.state==='exit'&&g.tx===9&&g.ty===5){g.state=g.banquo?'chase':frightT>0?'frightened':mode;}
   if(g.state==='eaten'&&g.tx===9&&g.ty===7){g.state='exit';}
   const opts=[];
   const allowRev=g.state==='eaten'||g.state==='exit'&&false;
@@ -660,7 +685,7 @@ function gArrive(g){
   }
   if(!opts.length){for(let d=0;d<4;d++){const [dx,dy]=DIRS[d];if(gPass(g.tx+dx,g.ty+dy,g.state))opts.push(d);}}
   let pick=opts[0];
-  if(g.state==='frightened'||(cfg.mode==='calm'&&(g.state==='chase')&&Math.random()<.22)){pick=opts[Math.floor(Math.random()*opts.length)];}
+  if(g.state==='frightened'||(g.state==='chase'&&Math.random()<TR().wander)){pick=opts[Math.floor(Math.random()*opts.length)];}
   else if(g.state==='eaten'){let best=1e9;for(const d of opts){const nx=g.tx+DIRS[d][0],ny=g.ty+DIRS[d][1];const v=L.distHouse[ny][nx];if(v>=0&&v<best){best=v;pick=d;}}}
   else{
     const [tx,ty]=gTarget(g);let best=1e9;
@@ -684,33 +709,46 @@ function playUpdate(dt){
   if(invuln>0)invuln-=dt;
   if(frightT>0){frightT-=dt;if(frightT<=0){ghosts.forEach(g=>{if(g.state==='frightened')g.state=mode;});chain=0;}}
   else{modeT-=dt;if(modeT<=0&&modeI<MODES.length-1){modeI++;mode=MODES[modeI][0];modeT=MODES[modeI][1];
-    ghosts.forEach(g=>{if(g.state==='scatter'||g.state==='chase'){g.state=mode;reverse(g);}});}}
+    ghosts.forEach(g=>{if(g.banquo)return;if(g.state==='scatter'||g.state==='chase'){g.state=mode;reverse(g);}});}}
   // player
   const p=player;
   if(!p.moving&&p.want>=0&&canGo(p,p.want)){setDir(p,p.want);p.moving=true;p.t=0;}
+  if(p.haunt>0)p.haunt-=dt;
   if(p.moving){advance(p,PSPEED*dt,pArrive);p.anim+=dt*10;}
   if(S!=='play')return;
   // pickups at nearest tile
   const n=nearest(p);
   if(L.gem[n.y]&&L.gem[n.y][n.x]){L.gem[n.y][n.x]=false;score+=10;SFX.gem();}
-  for(const d of L.daggers){if(d.alive&&d.x===n.x&&d.y===n.y){d.alive=false;score+=50;SFX.dagger();frightT=cfg.mode==='calm'?9:7;chain=0;
+  for(const d of L.daggers){if(d.alive&&d.x===n.x&&d.y===n.y){d.alive=false;score+=50;SFX.dagger();frightT=TR().fright(roomIdx);chain=0;
     burst(d.x*TS+8,d.y*TS+8,'#ff6a6a',16,50);pop(d.x*TS+8,d.y*TS,'SCARE THEM!','#ffd0d0');
-    ghosts.forEach(g=>{if(g.state==='scatter'||g.state==='chase'){g.state='frightened';reverse(g);}});}}
+    ghosts.forEach(g=>{if(g.banquo)return;if(g.state==='scatter'||g.state==='chase'){g.state='frightened';reverse(g);}});}}
   for(const s of L.scrolls){if(s.alive&&s.x===n.x&&s.y===n.y){resolveScroll(s);return;}}
   // ghosts
   for(const g of ghosts){
     g.anim+=dt*6;
     if(g.state==='house'){g.timer-=dt;if(g.timer<=0){g.state='exit';g.moving=true;gArrive(g);}continue;}
-    const sp=g.state==='frightened'?gSpeed()*.55:g.state==='eaten'?9:g.state==='exit'?gSpeed()*.8:gSpeed();
+    const sp=(g.state==='frightened'?gSpeed()*.55:g.state==='eaten'?9:g.state==='exit'?gSpeed()*.8:gSpeed())*(g.banquo?1.3:1);
     if(!g.moving){gArrive(g);}
     advance(g,sp*dt,gArrive);
     // collision
     const a=posPx(p),b=posPx(g);
     if(Math.hypot(a.x-b.x,a.y-b.y)<9){
       if(g.state==='frightened'){g.state='eaten';chain++;const pts=100*Math.pow(2,chain);score+=pts;SFX.eat();burst(b.x+8,b.y+8,'#9fb0ff',14,50);pop(b.x+8,b.y,'+'+pts,'#bfc8ff');}
-      else if((g.state==='scatter'||g.state==='chase'||g.state==='exit')&&invuln<=0){die();return;}
+      else if((g.state==='scatter'||g.state==='chase'||g.state==='exit')&&invuln<=0){if(g.banquo)haunt(g);else{die();return;}}
     }
   }
+}
+// Banquo's touch does not cost a candle: it HAUNTS you. Your controls flip (Fleance, his son, only shakes it off sooner),
+// and the ghost sinks back into the cauldron to rise again later.
+function haunt(g){
+  const son=cfg.hero==='fleance';
+  player.haunt=son?2.5:5;invuln=1.4;SFX.freeze();shake=4;
+  burst(player.tx*TS+8,player.ty*TS+8,'#bcd0ff',22,55);pop(player.tx*TS+8,player.ty*TS-4,son?'FATHER?!':'HAUNTED!','#bcd0ff');
+  g.state='house';g.tx=9;g.ty=7;g.t=0;g.dx=0;g.dy=0;g.moving=false;g.timer=7;
+}
+function hauntFx(){
+  const a=.1+.05*Math.sin(time*10);R(ctx,'rgba(130,160,255,'+a+')',0,HUD,W,MAPH);
+  if(Math.floor(time*3)%2===0)txt('HAUNTED! CONTROLS FLIPPED',W/2,HUD+4,'#bcd0ff',8,'center');
 }
 function die(){S='dying';dieT=1.1;candles--;SFX.hit();shake=6;burst(player.tx*TS+8,player.ty*TS+8,RED,18,60);}
 function respawn(){setupPlayer();setupGhosts();mode='scatter';modeI=0;modeT=7;frightT=0;chain=0;invuln=2.2;S='play';}
@@ -754,17 +792,27 @@ function update(dt){
    ===================================================================== */
 const GY=222;                // the line the player stands on, in arena pixels
 const STN=[30,W-30];      // where the three scrolls park
-const bossCfg=()=>cfg.mode==='calm'?{fire:2.8,ball:56,pspd:88}:{fire:1.9,ball:80,pspd:94};
+// Hecate's numbers come from the level table (TIER.*.boss).
+const bossCfg=()=>TR().boss;
+const FBC={aim:{g:'77,255,136',a:'#0e6a38',b:'#4dff88',c:'#eaffd0'},lob:{g:'140,255,90',a:'#2f6a10',b:'#9dff5a',c:'#f6ffd6'},
+  rain:{g:'235,255,80',a:'#6a7a0e',b:'#e0ff4d',c:'#ffffd8'},dart:{g:'80,235,255',a:'#0e566a',b:'#4dd8ff',c:'#e4ffff'}};
+function pickKind(b,C){
+  const w=C.pat[b.hp]||C.pat[3],ks=Object.keys(w).filter(k=>k!==b.lastKind);
+  let r=Math.random()*ks.reduce((a,k)=>a+w[k],0),pick=ks[0];
+  for(const k of ks){r-=w[k];if(r<=0){pick=k;break;}}
+  b.lastKind=pick;return pick;
+}
 function startBoss(intro){
-  B={hp:3,hearts:2,streak:0,big:false,bigT:0,px:W/2,face:3,anim:0,moving:false,frozen:0,inv:0,
-     t:0,hx:W/2,hy:56,cast:0,hurt:0,flash:0,fireT:2.4,fireDelay:0,boltT:0,balls:[],scrolls:[],q:null,qT:1.4,fb:null,fbT:0,
+  B={hp:3,hearts:bossCfg().hearts,maxHearts:bossCfg().hearts,maxPotions:bossCfg().potions,streak:0,big:false,bigT:0,px:W/2,face:3,anim:0,moving:false,frozen:0,inv:0,
+     t:0,hx:W/2,hy:56,cast:0,hurt:0,flash:0,fireT:1.8,fireDelay:0,boltT:0,balls:[],scrolls:[],q:null,fb:null,fbT:0,stage:'dodge',dodgeT:bossCfg().dodge*.6,wind:0,lobT:2,pend:null,lastKind:null,potions:bossCfg().potions,shield:0,waitHint:false,
      jy:0,jv:0,jumpHint:false,bag:null,vc:{},last:null,ph:'fight',sl:0,hitDone:false,dyT:0,lostT:0,gone:false,light:3};
   parts=[];pops=[];shake=0;tgtX=null;held.l=held.r=false;
   if(intro){
     say([
       {t:'A COLD WIND BLOWS',s:'The castle shakes. A giant shadow rises above the walls: HECATE, Queen of the Witches!'},
       {t:'HECATE',s:'"You think you know the Sisters\' words? Prove it, little scholar!"'},
-      {t:'HOW TO FIGHT',s:isTouch?'DRAG to run. SWIPE UP to jump over fireballs. Touch the scroll with the right word. 3 right in a row = GROW, then TAP to SLASH!':'RUN left and right. Press UP to JUMP over fireballs. Touch the scroll with the right word. 3 right in a row = GROW, then SLASH!'}
+      {t:'HOW TO FIGHT',s:isTouch?'DRAG to run, SWIPE UP to jump. Hecate PAUSES to ask a question: take your time and touch the right scroll.':'Run with the arrows, UP to jump. Hecate PAUSES to ask a question: take your time and touch the right scroll.'},
+      {t:'POWER AND POTIONS',s:isTouch?'3 right in a row = GROW, then TAP to SLASH! SWIPE DOWN (or tap a flask) for a SHIELD potion. You get '+bossCfg().potions+'.':'3 right in a row = GROW, then SPACE to SLASH! Press DOWN for a SHIELD potion. You get '+bossCfg().potions+' per fight.'}
     ],()=>{S='boss';});
   }else S='boss';
 }
@@ -773,14 +821,16 @@ function bossAsk(b){
   if(!b.bag||!b.bag.length){b.bag=shuffle(pool,Math.random);if(b.bag.length>1&&b.bag[b.bag.length-1]===b.last)b.bag.unshift(b.bag.pop());}
   const w=b.bag.pop();b.last=w;
   const v=(b.vc[w.w]=(b.vc[w.w]||0)+1)%2;            // the clue wording alternates between visits
-  const others=shuffle(WORDS.filter(x=>x!==w&&!confusable(x,w)),Math.random).slice(0,b.hp===1?2:1);
+  const three=b.hp===1&&bossCfg().three;
+  const others=shuffle(WORDS.filter(x=>x!==w&&!confusable(x,w)),Math.random).slice(0,three?2:1);
   let labels,sts;
-  if(b.hp===1){ // last life: three scrolls. The right one is always at an end, so a wrong one sits in your way.
+  if(three){ // last life: three scrolls. The right one is always at an end, so a wrong one sits in your way.
     const ends=shuffle([0,2],Math.random),wrong=others;
     labels=[null,null,null];labels[ends[0]]=w;labels[1]=wrong[0];labels[ends[1]]=wrong[1];sts=[30,W/2,W-30];
   }else{labels=shuffle([w,...others],Math.random);sts=STN;}
   if(!b.jumpHint){b.jumpHint=true;pop(W/2,GY-60,isTouch?'SWIPE UP = JUMP':'UP = JUMP','#fff1b8');}
-  b.q={word:w,text:v?w.boss:w.scene};
+  b.q={word:w,text:v?w.boss:w.scene};b.stage='ask';b.wind=0;b.fb=null;b.fbT=0;b.lobT=2.2;
+  if(!b.waitHint){b.waitHint=true;pop(W/2,GY-84,'HECATE WAITS...','#7dff9f');}
   b.scrolls=labels.map((l,i)=>({x:sts[i]<W/2?-16:W+16,sx:sts[i],word:l,correct:l===w,ph:Math.random()*6,armed:false,out:0}));
   SFX.select();
 }
@@ -789,30 +839,38 @@ function bossAnswer(b,s){
   b.scrolls.forEach(o=>{o.out=o.x<W/2?-1:1;});
   if(s.correct){
     SFX.good();b.streak++;score+=100;burst(s.x,GY-10,GOLD,24,70);pop(s.x,GY-32,'+100',GOLD);
-    b.fb={t:'SCROLL OF '+up(wd.w)+'!',s:wd.w+': '+wd.def};b.fbT=4;b.qT=4;b.q=null;
-    if(b.streak>=3){b.big=true;b.bigT=0;b.fbT=1e9;b.qT=1e9;SFX.grow();burst(b.px,GY-12,GOLD,40,90);pop(b.px,GY-48,'POWER UP!',GOLD);}
+    b.fb={t:'SCROLL OF '+up(wd.w)+'!',s:wd.w+': '+wd.def};b.fbT=1e9;b.q=null;b.stage='dodge';b.dodgeT=bossCfg().dodge;b.fireT=1.8;
+    if(b.streak>=3){b.big=true;b.bigT=0;b.fbT=1e9;SFX.grow();burst(b.px,GY-12,GOLD,40,90);pop(b.px,GY-48,'POWER UP!',GOLD);}
   }else{
-    SFX.wrong();SFX.freeze();stats[qw.w].wrong++;b.streak=0;b.frozen=1.6;b.inv=2.2;b.boltT=.55;b.cast=.55;shake=4;
+    SFX.wrong();SFX.freeze();if(stats[qw.w])stats[qw.w].wrong++;b.streak=0;b.frozen=bossCfg().frozen;b.inv=2.2;b.boltT=.55;b.cast=.55;shake=4;
     burst(b.px,GY-10,'#9fd8ff',22,55);pop(b.px,GY-34,'FROZEN!','#9fd8ff');
-    b.fb={t:'THAT SCROLL SAYS '+up(wd.w),s:'It means: '+wd.def};b.fbT=4.6;b.qT=4.6;b.q=null;
+    b.fb={t:'THAT SCROLL SAYS '+up(wd.w),s:'It means: '+wd.def};b.fbT=1e9;b.q=null;b.stage='dodge';b.dodgeT=bossCfg().dodge;b.fireT=2.8;
   }
 }
-function hecateFire(b,C){
+function hecateFire(b,C,kind){
   SFX.fire();
-  const ox=b.hx,oy=b.hy+14,lead=cfg.mode==='spooky'&&b.moving?(b.face===3?14:-14):0;
+  const ox=b.hx,oy=b.hy+14,lead=C.lead&&b.moving?(b.face===3?C.lead:-C.lead):0;
   const base=Math.atan2(GY-8-oy,b.px+lead-ox);
-  const offs=b.hp===3?[0]:b.hp===2?(Math.random()<.4?[-.2,.2]:[0]):(Math.random()<.5?[-.3,0,.3]:[-.14,.14]);
-  offs.forEach(o=>{const a=base+o;b.balls.push({x:ox,y:oy,vx:Math.cos(a)*C.ball,vy:Math.sin(a)*C.ball,r:4,age:0});});
+  const add=(a,sp,r,k)=>b.balls.push({x:ox,y:oy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r,age:0,k});
+  if(kind==='lob')add(base,C.ball*.5,7,'lob');
+  else if(kind==='dart')add(base,C.ball*1.55,3,'dart');
+  else if(kind==='fan')[-.3,0,.3].forEach(o=>add(base+o,C.ball,4,'aim'));
+  else if(kind==='rain'){const n=C.rainN;for(let i=0;i<n;i++){const x=clamp(b.px+(i-(n-1)/2)*34+(Math.random()-.5)*16,10,W-10);b.balls.push({x,y:18,vx:0,vy:C.ball*1.1,r:4,age:0,k:'rain'});}}
+  else add(base,C.ball,4,'aim');
 }
 function hecateBolt(b){ // the sure shot: fast, aimed, and it ignores invulnerability
   SFX.fire();SFX.fire();
   const ox=b.hx,oy=b.hy+14,a=Math.atan2(GY-8-oy,b.px-ox);
-  b.balls.push({x:ox,y:oy,vx:Math.cos(a)*250,vy:Math.sin(a)*250,r:6,age:0,direct:true});
+  b.balls.push({x:ox,y:oy,vx:Math.cos(a)*bossCfg().bolt,vy:Math.sin(a)*bossCfg().bolt,r:6,age:0,direct:true});
 }
 function bossHurt(b,o){
   b.hearts--;b.inv=1.6;shake=7;SFX.hit();
   burst(b.px,GY-10,RED,18,60);burst(o.x,o.y,'#4dff88',12,50);pop(b.px,GY-36,'OUCH!',RED);
   if(b.hearts<=0){b.ph='lost';b.lostT=1.3;b.balls=[];b.scrolls=[];b.q=null;}
+}
+function bossPotion(){
+  const b=B;if(!b||b.ph!=='fight'||b.potions<=0||b.shield>0)return;
+  b.potions--;b.shield=bossCfg().shield;SFX.grow();burst(b.px,GY-10,'#9fd8ff',26,70);pop(b.px,GY-36,'SHIELD!','#9fd8ff');
 }
 function bossJump(){
   const b=B;if(!b||b.ph!=='fight'||b.jy>0||b.frozen>0||b.big)return;
@@ -833,16 +891,17 @@ function bossFight(dt,b,C){
   if(b.jy>0){b.jv-=520*dt;b.jy+=b.jv*dt;if(b.jy<=0){b.jy=0;b.jv=0;}}
   if(b.big)b.bigT+=dt;
   // Hecate: cast, then throw
-  b.fireT-=dt;
-  if(b.fireT<=0){b.cast=.45;b.fireDelay=.38;b.fireT=C.fire*(1-.12*(3-b.hp))*(.85+Math.random()*.3);}
-  if(b.fireDelay>0){b.fireDelay-=dt;if(b.fireDelay<=0)hecateFire(b,C);}
+  const asking=b.stage==='ask',firing=b.big||b.dodgeT>0;
+  if(asking){if(b.hp===1){b.lobT-=dt;if(b.lobT<=0){b.lobT=C.lob;b.cast=.45;b.fireDelay=.5;b.pend='lob';}}} // on her last life she still lobs a slow ball while you read
+  else if(firing){b.fireT-=dt;if(b.fireT<=0){const k=pickKind(b,C);b.pend=k;b.cast=.45;b.fireDelay=k==='dart'?.65:.38;b.fireT=C.fire*(1-C.fsc*(3-b.hp))*(.85+Math.random()*.3);}}
+  if(b.fireDelay>0){b.fireDelay-=dt;if(b.fireDelay<=0){hecateFire(b,C,b.pend);b.pend=null;}}
   if(b.boltT>0){b.boltT-=dt;if(b.boltT<=0)hecateBolt(b);}
   // fireballs
   const pr=b.big?{x:b.px,y:GY-14,r:11}:{x:b.px,y:GY-7-b.jy,r:6};
   b.balls=b.balls.filter(o=>{
     o.x+=o.vx*dt;o.y+=o.vy*dt;o.age+=dt;
     if(Math.random()<.6)parts.push({x:o.x,y:o.y,vx:(Math.random()-.5)*10,vy:-6+Math.random()*8,life:.3,max:.3,col:o.direct?'#eaffd0':'#4dff88',s:o.direct?2:1});
-    if(b.ph==='fight'&&Math.hypot(o.x-pr.x,o.y-pr.y)<pr.r+o.r&&(o.direct||b.inv<=0)){bossHurt(b,o);return false;}
+    if(b.ph==='fight'&&Math.hypot(o.x-pr.x,o.y-pr.y)<pr.r+o.r){if(b.shield>0){burst(o.x,o.y,'#9fd8ff',10,50);SFX.select();return false;}if(o.direct||b.inv<=0){bossHurt(b,o);return false;}}
     if(o.y>GY+2||o.x<-20||o.x>W+20){burst(o.x,Math.min(o.y,GY),'#4dff88',8,40);return false;}
     return true;
   });
@@ -860,15 +919,19 @@ function bossFight(dt,b,C){
     if(!ov){s.armed=true;s.dw=0;}else{s.dw=(s.dw||0)+dt;if(s.armed||s.dw>.5){bossAnswer(b,s);break;}} // if a scroll lands under you, you get half a second to step off
   }
   if(b.fbT>0&&b.fbT<1e8){b.fbT-=dt;if(b.fbT<=0)b.fb=null;}
-  if(!b.q&&!b.big&&b.frozen<=0){b.qT-=dt;if(b.qT<=0)bossAsk(b);}
+  // dodge for a while, let the last fireballs clear, then Hecate holds still and asks
+  if(b.stage==='dodge'&&!b.q&&!b.big&&b.frozen<=0&&b.boltT<=0){
+    b.dodgeT-=dt;
+    if(b.dodgeT<=0){b.wind+=dt;if((!b.balls.length&&b.fireDelay<=0)||b.wind>3){b.balls.forEach(o=>burst(o.x,o.y,'#4dff88',6,35));b.balls=[];bossAsk(b);}}
+  }
 }
 function bossUpdate(dt){
   const b=B,C=bossCfg();
-  if(b.flash>0)b.flash-=dt;if(b.hurt>0)b.hurt-=dt;if(b.cast>0)b.cast-=dt;if(b.inv>0)b.inv-=dt;
+  if(b.shield>0)b.shield-=dt;if(b.flash>0)b.flash-=dt;if(b.hurt>0)b.hurt-=dt;if(b.cast>0)b.cast-=dt;if(b.inv>0)b.inv-=dt;
   b.anim+=dt*10;
-  if(b.ph==='fight'||b.ph==='lost')b.t+=dt;
-  const sp=1+(3-b.hp)*.22;
-  b.hx=W/2+Math.sin(b.t*.5*sp)*74+Math.sin(b.t*1.25)*16;
+  if((b.ph==='fight'&&b.stage!=='ask')||b.ph==='lost')b.t+=dt;
+  const sp=C.hs0+(3-b.hp)*C.hs1;
+  b.hx=W/2+Math.sin(b.t*.5*sp)*74+Math.sin(b.t*C.sway)*16;
   b.hy=56+Math.sin(b.t*.9)*8;
   b.light-=dt;if(b.light<=0){b.light=5+Math.random()*6;b.lightning=.25;}
   if(b.lightning>0)b.lightning-=dt;
@@ -883,7 +946,7 @@ function bossUpdate(dt){
     if(b.sl>=.95){
       b.big=false;b.streak=0;
       if(b.hp<=0){b.ph='dying';b.dyT=2.2;SFX.roar();}
-      else{b.ph='fight';b.fireT=1.4;b.qT=1.6;b.fb=null;b.fbT=0;}
+      else{b.ph='fight';b.fireT=1.4;b.stage='dodge';b.dodgeT=bossCfg().dodge*.5;b.fb=null;b.fbT=0;}
     }
   }else if(b.ph==='dying'){
     b.dyT-=dt;shake=Math.max(shake,3);
@@ -993,7 +1056,7 @@ function drawMap(){
     else if(gh.state==='frightened')spr=frightFlash?SP.flash[f]:SP.scared[f];
     else spr=SP.ghost[gh.k]['n'+f+gh.face];
     const hide=false;
-    ctx.globalAlpha=gh.state==='house'?.75:1;
+    ctx.globalAlpha=gh.banquo?.5+.15*Math.sin(time*3):gh.state==='house'?.75:1;
     ctx.drawImage(spr,Math.round(q.x),Math.round(q.y)+bob);ctx.globalAlpha=1;
   });
   // player
@@ -1038,11 +1101,13 @@ function dim(a=.55){R(ctx,'rgba(6,4,16,'+a+')',0,HUD,W,MAPH);}
 
 function renderTitle(){
   titleScene();logo();
-  pbox(60,198,184,46);
+  pbox(50,190,204,72);
   // menu
-  const y0=208;
-  MENU.forEach((_,i)=>{const y=y0+i*16;if(i===menuSel){arrowR(72,y,GOLD);}txt(menuLabel(i),86,y,i===menuSel?'#fff1b8':INK);});
-  txt(isTouch?'TAP TO SELECT':'ARROWS + SPACE, OR TAP',W/2,296,DIM,8,'center');
+  const y0=199;
+  MENU.forEach((_,i)=>{const y=y0+i*15;if(i===menuSel){arrowR(62,y,GOLD);}txt(menuLabel(i),76,y,i===menuSel?'#fff1b8':INK);});
+  ctx.drawImage(SP.player[1][Math.floor(time*3)%2],12,208,32,32);   // a 2x preview of who you are playing
+  txt(TR().title,W/2,268,'#8fffb0',8,'center');txt(TR().blurb,W/2,279,DIM,8,'center');
+  txt(isTouch?'TAP TO SELECT':'ARROWS + SPACE, OR TAP',W/2,300,DIM,8,'center');
 }
 function renderHow(){
   titleScene();R(ctx,'rgba(6,4,16,.6)',0,0,W,H);
@@ -1059,7 +1124,7 @@ function renderHow(){
     [SP.hat,isTouch?'Boss: drag to run, swipe UP to jump, TAP to SLASH!':'Boss: dodge or JUMP fireballs, grab right scrolls, SLASH!']
   ];
   rows.forEach(([spr,t],i)=>{const y=32+i*29;ctx.drawImage(spr,16,y);wrap(t,31).forEach((l,k)=>txt(l,40,y+1+k*10,INK));});
-  txt(isTouch?'SWIPE to move in the castle':'ARROWS move   SPACE continues',W/2,H-42,DIM,8,'center');
+  txt(isTouch?'SWIPE to move, TAP to hold':'ARROWS move, SPACE holds',W/2,H-42,DIM,8,'center');
   if(Math.floor(time*2)%2===0)txt(isTouch?'TAP TO START':'PRESS SPACE',W/2,H-28,GOLD,8,'center');
 }
 function renderIntro(){
@@ -1069,7 +1134,8 @@ function renderIntro(){
   txt('ROOM '+(roomIdx+1)+' OF '+plan.length,W/2,80,GOLD,8,'center');
   txt(rm.floor===1?'FLOOR 1: MEANINGS':'FLOOR 2: IN THE PLAY',W/2,92,INK,8,'center');
   wrap('Read the clue below, then find the scroll with the right word. Dodge the Weird Sisters!',31).forEach((l,i)=>txt(l,W/2,112+i*10,DIM,8,'center'));
-  if(Math.floor(time*2)%2===0)txt('PRESS SPACE TO ENTER',W/2,168,GOLD,8,'center');
+  if(cfg.rank==='hard'&&roomIdx>=9)txt("BANQUO'S GHOST WALKS AGAIN!",W/2,150,'#bcd0ff',8,'center');
+  if(Math.floor(time*2)%2===0)txt(isTouch?'TAP TO ENTER':'PRESS SPACE TO ENTER',W/2,168,GOLD,8,'center');
 }
 function renderGameOver(){
   drawMap();dim(.7);drawHUD();clueBox();
@@ -1091,7 +1157,8 @@ function renderWin(){
   list.forEach((w,i)=>{const y=54+i*24;const wr=stats[w.w].wrong;const st=wr===0?3:wr<=2?2:1;
     txt(w.w,22,y,INK);for(let k=0;k<3;k++)star(212+k*10,y,k<st);
     txt(wr===0?'no slips':wr+' wrong scroll'+(wr>1?'s':''),22,y+10,wr===0?'#8fffb0':DIM);});
-  if(Math.floor(time*2)%2===0)txt('PRESS SPACE',W/2,H-26,GOLD,8,'center');
+  if(bossDone){txt('HECATE DEFEATED!',W/2,H-58,'#7dff9f',8,'center');txt(TR().title,W/2,H-46,GOLD,8,'center');}
+  if(Math.floor(time*2)%2===0)txt(isTouch?'TAP TO CONTINUE':'PRESS SPACE',W/2,H-26,GOLD,8,'center');
 }
 
 /* ---- boss drawing ---- */
@@ -1105,6 +1172,12 @@ function heart(x,y,on){
   [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dx,dy])=>rows.forEach((r,j)=>{for(let i=0;i<7;i++)if(r[i]==='X')R(ctx,'#000',x+i+dx,y+j+dy,1,1);}));
   rows.forEach((r,j)=>{for(let i=0;i<7;i++)if(r[i]==='X')R(ctx,c,x+i,y+j,1,1);});
   if(on)R(ctx,'#ff9aa8',x+1,y+1,1,1);
+}
+function flask(x,y,on){
+  const rows=['..XXX..','...X...','...X...','..XXX..','.XXXXX.','XXXXXXX','XXXXXXX','.XXXXX.'];
+  [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dx,dy])=>rows.forEach((r,j)=>{for(let i=0;i<7;i++)if(r[i]==='X')R(ctx,'#000',x+i+dx,y+j+dy,1,1);}));
+  rows.forEach((r,j)=>{for(let i=0;i<7;i++)if(r[i]==='X')R(ctx,on?(j<3?'#c9a56b':(j>5?'#2f9fe0':'#58d0ff')):'#3a3a50',x+i,y+j,1,1);});
+  if(on)R(ctx,'#e8f9ff',x+2,y+5,1,1);
 }
 function buildArena(){
   return mk(W,MAPH,g=>{
@@ -1172,9 +1245,10 @@ function drawArena(){
   // fireballs
   b.balls.forEach(o=>{
     const rr=o.r+(Math.sin(time*20+o.age*30)>0?1:0);
-    ctx.globalCompositeOperation='lighter';ctx.fillStyle='rgba(77,255,136,.16)';disc(ctx,o.x,o.y,rr+6);ctx.fillStyle='rgba(77,255,136,.22)';disc(ctx,o.x,o.y,rr+3);
+    const pc=FBC[o.k]||FBC.aim;
+    ctx.globalCompositeOperation='lighter';ctx.fillStyle='rgba('+pc.g+',.16)';disc(ctx,o.x,o.y,rr+6);ctx.fillStyle='rgba('+pc.g+',.22)';disc(ctx,o.x,o.y,rr+3);
     ctx.globalCompositeOperation='source-over';
-    ctx.fillStyle='#0e6a38';disc(ctx,o.x,o.y,rr);ctx.fillStyle='#4dff88';disc(ctx,o.x,o.y,rr-1);ctx.fillStyle='#eaffd0';disc(ctx,o.x,o.y,Math.max(1,rr-3));
+    ctx.fillStyle=pc.a;disc(ctx,o.x,o.y,rr);ctx.fillStyle=pc.b;disc(ctx,o.x,o.y,rr-1);ctx.fillStyle=pc.c;disc(ctx,o.x,o.y,Math.max(1,rr-3));
   });
   // the slash: a white woosh line across the screen, then a red cut through Hecate
   if(b.ph==='slash'){
@@ -1212,11 +1286,16 @@ function drawBossPlayer(b){
     ctx.save();ctx.translate(Math.round(b.px+7*sc),Math.round(GY-8*sc));ctx.rotate(rot);ctx.drawImage(SP.sword,-7,-35);
     ctx.globalCompositeOperation='lighter';ctx.fillStyle='rgba(180,230,255,.18)';disc(ctx,0,-22,9);ctx.restore();
   }
+  if(b.shield>0&&(b.shield>1.5||Math.floor(time*12)%2===0)){
+    const cy2=GY-8*sc;ctx.globalCompositeOperation='lighter';ctx.fillStyle='rgba(120,200,255,.20)';disc(ctx,b.px,cy2,Math.round(13*sc));ctx.globalCompositeOperation='source-over';
+    ctx.strokeStyle='rgba(190,235,255,.9)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(b.px,cy2,13*sc,0,Math.PI*2);ctx.stroke();
+  }
   if(b.frozen>0){const x=Math.round(b.px);R(ctx,'rgba(160,220,255,.4)',x-9,GY-19,18,21);R(ctx,'rgba(255,255,255,.7)',x-9,GY-19,18,1);R(ctx,'rgba(255,255,255,.7)',x-9,GY-19,1,21);}
 }
 function bossHUD(){
   R(ctx,'#0d0b1a',0,0,W,HUD);R(ctx,'#3a2f6b',0,HUD-1,W,1);
-  for(let i=0;i<2;i++)heart(5+i*12,4,i<B.hearts);
+  for(let i=0;i<B.maxHearts;i++)heart(5+i*12,4,i<B.hearts);
+  for(let i=0;i<B.maxPotions;i++)flask(58+i*11,4,i<B.potions);
   txt('HECATE',W/2-18,4,'#7dff9f',8,'center');
   for(let i=0;i<3;i++){ctx.fillStyle=i<B.hp?'#4dff88':'#2a3a30';disc(ctx,168+i*11,8,4);if(i<B.hp){ctx.fillStyle='#eaffd0';disc(ctx,168+i*11,8,1);}}
   txt(String(score).padStart(6,'0'),W-4,4,INK,8,'right');
@@ -1226,13 +1305,13 @@ function bossBox(){
   let title,text='';
   if(b.big&&b.ph==='fight'){title=Math.floor(time*3)%2?(isTouch?'POWER UP! TAP TO SLASH!':'POWER UP! PRESS SPACE / A!'):'POWER UP! SLASH HER!';text=b.fb?b.fb.s:'Swing the sword!';}
   else if(b.fb){title=b.fb.t;text=b.fb.s;}
-  else if(b.q){title=isTouch?'WHICH WORD FITS? SWIPE UP=JUMP':'WHICH WORD FITS?  (UP = JUMP)';text=b.q.text;}
-  else{title=b.ph==='lost'?'HECATE LAUGHS...':'GET READY!';text=b.ph==='lost'?'':'Keep moving. Dodge the green fireballs!';}
+  else if(b.q){title='WHICH WORD FITS?'+(b.hp===1&&bossCfg().three?(isTouch?' SWIPE UP=JUMP':' UP=JUMP'):'');text=b.q.text;}
+  else{title=b.ph==='lost'?'HECATE LAUGHS...':'DODGE THE FIREBALLS!';text=b.ph==='lost'?'':(isTouch?'Run! Swipe UP to jump, DOWN for a shield potion.':'Run! UP jumps, DOWN drinks a shield potion.');}
   txt(title,10,HUD+MAPH+8,b.big&&b.ph==='fight'?'#fff1b8':GOLD);
   wrap(text,35).slice(0,4).forEach((l,i)=>txt(l,10,HUD+MAPH+18+i*10,INK));
   for(let k=0;k<3;k++)star(W-44+k*10,HUD+MAPH+8,k<b.streak||b.big);
 }
-function drawScene(){if(B)drawArena();else drawMap();}
+function drawScene(){if(B)drawArena();else{drawMap();if(player&&player.haunt>0&&S==='play')hauntFx();}}
 function exitTab(){R(ctx,'#2a2250',208,2,40,12);R(ctx,'#8a7acb',208,2,40,1);R(ctx,'#8a7acb',208,13,40,1);R(ctx,'#8a7acb',208,2,1,12);R(ctx,'#8a7acb',247,2,1,12);txt('EXIT',228,4,'#d8cfff',8,'center',false);}
 function drawTop(){if(B)bossHUD();else drawHUD();if(S!=='pause'&&S!=='intro')exitTab();}
 function drawBottom(){if(S==='dialog'&&dlg)dialogBox();else if(B)bossBox();else clueBox();}
@@ -1258,11 +1337,11 @@ function render(){
 function press(d){
   ac();
   if(S==='play'||S==='falling'){
-    const p=player;p.want=d;
+    const p=player;if(p.haunt>0&&d<4)d=d^1;p.want=d;p.halt=false;
     if(p.moving&&S==='play'&&DIRS[d][0]===-p.dx&&DIRS[d][1]===-p.dy&&(p.dx||p.dy))reverse(p);
     if(p.moving&&S==='play'&&d>=0&&(p.dx||p.dy)&&p.t===0&&canGo(p,d)){setDir(p,d);}
   }else if(S==='boss'){
-    if(d===2)held.l=true;else if(d===3)held.r=true;else if(d===0){if(B.big)bossSlash();else bossJump();}
+    if(d===2)held.l=true;else if(d===3)held.r=true;else if(d===0){if(B.big)bossSlash();else bossJump();}else if(d===1)bossPotion();
   }else if(S==='title'){
     if(d===0){menuSel=(menuSel+MENU.length-1)%MENU.length;SFX.select();}
     else if(d===1){menuSel=(menuSel+1)%MENU.length;SFX.select();}
@@ -1274,8 +1353,11 @@ function activate(){
   ac();
   if(S==='title'){
     if(menuSel===0){howStart=true;S='how';SFX.select();}
-    else if(menuSel===1){setMusic(!musicOn);}
+    else if(menuSel===1){cfg.rank=RANKS[(RANKS.indexOf(cfg.rank)+1)%RANKS.length];SFX.select();saveCfg();}
+    else if(menuSel===2){cfg.hero=HEROES[(HEROES.indexOf(cfg.hero)+1)%HEROES.length];SP.player=heroSet(cfg.hero);SFX.select();saveCfg();}
+    else if(menuSel===3){setMusic(!musicOn);}
   }else if(S==='boss'){if(B.big)bossSlash();else bossJump();}
+  else if(S==='play'){haltPlayer();}
   else if(S==='how'){if(howStart){howStart=false;SFX.start();newGame(2);}else{S='title';SFX.select();}}
   else if(S==='intro'){if(introT>.25){S='play';SFX.start();}}
   else if(S==='dialog'&&dlg){
@@ -1294,6 +1376,7 @@ function togglePause(){
   else if(S==='pause')S=pauseFrom;
   else if(S==='how'){howStart=false;S='title';}
 }
+function haltPlayer(){const p=player;if(S!=='play'||!p)return;p.want=-1;p.halt=true;pop(p.tx*TS+8,p.ty*TS,'HOLD','#bfe8ff');}
 function askExit(){ // opens the pause screen with BACK TO TITLE selected, so a stray tap can't lose a run
   if(S==='play'||S==='boss'||S==='dialog'||S==='intro'){pauseFrom=S;held.l=held.r=false;holds.clear();tgtX=null;S='pause';pauseSel=1;}
   else if(S==='pause')pauseSel=1;
@@ -1308,6 +1391,7 @@ addEventListener('keydown',e=>{
   else if(e.key===' '||e.key==='Enter'){activate();e.preventDefault();}
   else if(e.key==='p'||e.key==='P'||e.key==='Escape'){togglePause();e.preventDefault();}
   else if(e.key==='q'||e.key==='Q'){askExit();}
+  else if((e.key==='e'||e.key==='E')&&S==='boss'){bossPotion();}
   else if(e.key==='m'||e.key==='M'){setMusic(!musicOn);}
 },{passive:false});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&(S==='play'||S==='boss')){pauseFrom=S;held.l=held.r=false;holds.clear();S='pause';pauseSel=0;}});
@@ -1319,15 +1403,16 @@ let swipe=null,gs=null;
 cv.addEventListener('pointerdown',e=>{
   cv.focus();ac();try{cv.setPointerCapture(e.pointerId);}catch(_){}
   const r=cv.getBoundingClientRect();const x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
-  swipe={x:e.clientX,y:e.clientY,done:false};
+  swipe={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,t0:performance.now(),fired:false,done:false};
   if((S==='play'||S==='boss'||S==='dialog')&&x>198&&x<256&&y<HUD+2){askExit();return;}
+  if(S==='boss'&&x>52&&x<(60+B.maxPotions*11)&&y<HUD+2){bossPotion();return;}
   if(S==='boss'){
     // drag/tap to run; swipe UP to jump (or slash when powered up); TAP to slash when powered up
     gs={id:e.pointerId,x0:e.clientX,y0:e.clientY,t0:performance.now(),fired:false,moved:false};
     drag=e.pointerId;if(!B.big)tgtX=clamp(x,10,W-10);return;
   }
   if(S==='title'){
-    for(let i=0;i<MENU.length;i++){const my=208+i*16;if(x>60&&x<244&&y>my-5&&y<my+11){menuSel=i;activate();return;}}
+    for(let i=0;i<MENU.length;i++){const my=199+i*15;if(x>50&&x<254&&y>my-5&&y<my+10){menuSel=i;activate();return;}}
   }else if(S==='gameover'){for(let i=0;i<2;i++){const my=146+i*14;if(y>my-4&&y<my+11){goSel=i;activate();return;}}}
   else if(S==='pause'){for(let i=0;i<2;i++){const my=128+i*16;if(y>my-4&&y<my+12){pauseSel=i;activate();return;}}}
   else if(S!=='play'&&S!=='falling'&&S!=='dying')activate();
@@ -1337,14 +1422,16 @@ cv.addEventListener('pointermove',e=>{
     const r=cv.getBoundingClientRect(),dx=e.clientX-gs.x0,dy=e.clientY-gs.y0;
     if(Math.hypot(dx,dy)>10)gs.moved=true;
     if(!gs.fired&&dy<-24&&-dy>Math.abs(dx)*.7){gs.fired=true;if(B.big)bossSlash();else bossJump();}
+    else if(!gs.fired&&dy>24&&dy>Math.abs(dx)*.7){gs.fired=true;bossPotion();}
     if(!B.big||Math.abs(dx)>14)tgtX=clamp((e.clientX-r.left)*W/r.width,10,W-10);
     return;
   }
   if(!swipe||swipe.done||S!=='play')return;
   const dx=e.clientX-swipe.x,dy=e.clientY-swipe.y;
-  if(Math.max(Math.abs(dx),Math.abs(dy))>12){swipe.done=true;press(Math.abs(dx)>Math.abs(dy)?(dx>0?3:2):(dy>0?1:0));swipe.x=e.clientX;swipe.y=e.clientY;swipe.done=false;}
+  if(Math.max(Math.abs(dx),Math.abs(dy))>12){swipe.done=true;swipe.fired=true;press(Math.abs(dx)>Math.abs(dy)?(dx>0?3:2):(dy>0?1:0));swipe.x=e.clientX;swipe.y=e.clientY;swipe.done=false;}
 });
 function releasePtr(e){
+  if(swipe&&S==='play'&&!swipe.fired&&e.type==='pointerup'&&performance.now()-swipe.t0<350&&Math.hypot(e.clientX-swipe.x0,e.clientY-swipe.y0)<12)haltPlayer();
   swipe=null;
   if(gs&&gs.id===e.pointerId){if(S==='boss'&&B&&B.big&&!gs.fired&&!gs.moved&&performance.now()-gs.t0<450)bossSlash();gs=null;}
   if(drag===e.pointerId){drag=null;}
@@ -1391,8 +1478,7 @@ function frame(now){
   try{update(dt);render();}catch(err){console.error(err);}
   requestAnimationFrame(frame);
 }
-function boot(){loadOverrides();requestAnimationFrame(t=>{last=t;frame(t);});}
+function boot(){requestAnimationFrame(t=>{last=t;frame(t);});}
 if(document.fonts&&document.fonts.load){Promise.race([document.fonts.load('8px "Press Start 2P"'),new Promise(r=>setTimeout(r,1500))]).then(boot,boot);}else boot();
-
 })();
 </script>
